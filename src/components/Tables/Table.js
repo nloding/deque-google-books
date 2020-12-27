@@ -3,7 +3,6 @@ import { Pagination, TableHead } from './'
 import { TableData } from './TableData'
 
 const Table = ({ columns, data, page, setPage, total }) => {
-  console.log(data)
   return (
     <div className='flex flex-col'>
       <div className='-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8'>

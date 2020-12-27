@@ -16,12 +16,22 @@ const App = () => {
     const startIndex = page === 1
       ? 1
       : page * 10 + 1
+
+    const timer = new Date().getTime()
     
     fetch(`https://www.googleapis.com/books/v1/volumes?q=${term}&startIndex=${startIndex}&maxResults=10&key=${process.env.REACT_APP_GOOGLE_BOOKS_API_KEY}`)
       .then(response => response.json())
       .then(response => {
-        console.log(response)
-        const result = { total: response.totalItems, data: [] }
+        
+        const result = { 
+          responseTime: (new Date().getTime() - timer), 
+          total: response.totalItems, 
+          data: [],
+          earliestPublication: null,
+          mostRecentPublication: null,
+          mostCommonAuthor: null
+        }
+
         result.data = response.items.map((item) => {
           const { volumeInfo: { authors, description, title } } = item
           return {
@@ -30,6 +40,21 @@ const App = () => {
             authors: authors ? authors.join(', ') : 'Unknown'
           }
         })
+
+        // none of this is O(n)
+        const sortedByPublicationDate = response.items.sort((a, b) => Date.parse(a.volumeInfo.publishedDate) > Date.parse(b.volumeInfo.publishedDate))
+        result.earliestPublication = sortedByPublicationDate.shift().volumeInfo.publishedDate
+        result.mostRecentPublication = sortedByPublicationDate.pop().volumeInfo.publishedDate
+        
+        // this isn't O(n) either
+        // get array of all authors
+        const authors = response.items
+          .reduce((a, i) => a.concat(i.volumeInfo.authors), [])
+        // filter by occurrence
+        const sortedAuthors = authors.sort((a, b) => (
+          authors.filter((x) => x === a).length - authors.filter((x) => x === b).length
+        ))
+        result.mostCommonAuthor = sortedAuthors.pop()
 
         setResults(result)
       })
@@ -92,6 +117,17 @@ const App = () => {
           /> }
           { (!results || !results.data) && 'Enter a search term' }
         </div>
+        {results && results.data && (
+          <div className="mt-10">
+            Additional Info:
+            <ul>
+              <li>Response Time: { results.responseTime }ms</li>
+              <li>Earliest Publication Date: { results.earliestPublication }</li>
+              <li>Most Recent Publication Date: { results.mostRecentPublication }</li>
+              <li>Most Common Author: { results.mostCommonAuthor }</li>
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   )
